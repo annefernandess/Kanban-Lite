@@ -1,0 +1,45 @@
+# Build directories
+build/
+cmake-build-*/
+
+# Compiled objects
+*.o
+*.obj
+*.lo
+*.la
+*.a
+*.so
+*.dll
+*.dylib
+
+# Executáveis
+*.exe
+*.out
+*.app
+
+# Debug / IDE
+*.log
+*.swp
+*.DS_Store
+.vscode/
+.idea/
+
+# CTest / cache
+Testing/
+CMakeCache.txt
+CMakeFiles/
+Makefile
+compile_commands.json
+install_manifest.txt
+CTestTestfile.cmake
+
+# PlantUML generated (exceto o PNG final do diagrama)
+design/*.svg
+
+# PDF gerados (exceto o relatório final)
+# docs/*.pdf já estão sendo trackeados
+
+# Doxygen generated files 
+Doxyfile
+html/
+latex/

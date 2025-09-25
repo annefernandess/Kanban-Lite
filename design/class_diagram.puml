@@ -1,0 +1,91 @@
+@startuml class_diagram
+skinparam backgroundColor #ffffff
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+
+' =====================
+' Classes principais
+' =====================
+class Board {
+  - id : std::string
+  - name : std::string
+  - columns : std::vector<Column>
+  - activityLog : ActivityLog*
+  --
+  + addColumn(column: Column) : void
+  + removeColumn(name: std::string) : bool
+  + findColumn(name: std::string) : Column*
+  + addCard(columnName: std::string, card: Card) : bool
+  + moveCard(cardId: std::string, fromCol: std::string, toCol: std::string) : bool
+}
+
+class Column {
+  - name : std::string
+  - wipLimit : int
+  - cards : std::vector<Card>
+  --
+  + addCard(card: Card) : bool
+  + removeCard(cardId: std::string) : bool
+  + findCard(cardId: std::string) : Card*
+  + isFull() : bool
+}
+
+class Card {
+  - id : std::string
+  - title : std::string
+  - description : std::string
+  - assignee : User*
+  - priority : int
+  - createdAt : std::chrono::system_clock::time_point
+  - updatedAt : std::chrono::system_clock::time_point
+  --
+  + setTitle(t: std::string) : void
+  + setDescription(d: std::string) : void
+  + setAssignee(u: User*) : void
+  + setPriority(p: int) : void
+  + operator==(other: Card) : bool
+}
+
+class User {
+  - id : std::string
+  - name : std::string
+  - email : std::string
+  --
+  + getName() const : std::string
+}
+
+class ActivityLog {
+  - entries : std::vector<ActivityEntry>
+  --
+  + record(event: std::string) : void
+  + all() const : std::vector<ActivityEntry>
+}
+
+class ActivityEntry {
+  - timestamp : std::chrono::system_clock::time_point
+  - message : std::string
+}
+
+' =====================
+' Relações
+' =====================
+Board --> ActivityLog : usa
+Board *-- Column : composição
+Column *-- Card : composição
+Card --> User : assignee
+ActivityLog *-- ActivityEntry : composição
+
+note bottom of Board
+  Board agrega Column por composição.
+  Column agrega Card (composição).
+  Justificativa: relação de posse forte.
+end note
+
+note right of ActivityEntry
+  Interface Persistable planejada
+  para versões futuras (não implementada
+  na Etapa 1 - apenas design).
+end note
+
+@enduml
