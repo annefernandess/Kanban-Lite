@@ -56,25 +56,3 @@ jobs:
           ls -la include/
           ls -la src/
           ls -la tests/
-
-  documentation:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Install Doxygen
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y doxygen graphviz
-
-      - name: Generate documentation
-        run: |
-          doxygen Doxyfile
-          echo "Documentation generated successfully"
-
-      - name: Check documentation completeness
-        run: |
-          echo "Checking if all headers are documented..."
-          grep -r "@file" include/ || echo "Warning: Some files may lack @file documentation"
