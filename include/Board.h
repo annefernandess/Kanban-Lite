@@ -135,6 +135,11 @@ public:
      */
     void attachActivityLog(ActivityLog* log);
 
+    // Getters para acesso aos dados
+    const std::string& getId() const;
+    const std::string& getName() const;
+    const std::vector<Column>& getColumns() const;
+
 private:
     std::string m_id;                              /**< @brief Identificador único do board */
     std::string m_name;                            /**< @brief Nome descritivo do board */

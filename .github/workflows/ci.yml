@@ -1,4 +1,4 @@
-name: CI
+name: CI - Kanban-Lite
 
 on:
   push:
@@ -7,11 +7,17 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake
 
       - name: Configure CMake
         run: |
@@ -19,12 +25,34 @@ jobs:
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release
 
-      - name: Build
+      - name: Build all targets
         run: |
           cd build
-          cmake --build . --target headers_check -- -j 2
+          cmake --build . --parallel 2
 
-      - name: CTest
+      - name: Run all tests
         run: |
           cd build
           ctest --output-on-failure -V
+
+      - name: Test CLI functionality
+        run: |
+          cd build/src
+          echo "Testing basic CLI commands..."
+          ./kanban_cli help
+          echo -e "board create TestProject\ncolumn add TestProject ToDo\ncard add TestProject ToDo TestTask\ncard list TestProject\nexit" | ./kanban_cli
+
+  code-quality:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check code formatting
+        run: |
+          echo "Code quality checks would go here"
+          echo "For now, just verify files exist:"
+          ls -la include/
+          ls -la src/
+          ls -la tests/

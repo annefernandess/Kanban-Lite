@@ -115,6 +115,15 @@ public:
      */
     bool operator==(const Card& other) const;
 
+    // Getters para acesso aos dados
+    const std::string& getId() const;
+    const std::string& getTitle() const;
+    const std::string& getDescription() const;
+    User* getAssignee() const;
+    int getPriority() const;
+    const std::chrono::system_clock::time_point& getCreatedAt() const;
+    const std::chrono::system_clock::time_point& getUpdatedAt() const;
+
 private:
     std::string m_id;                              /**< @brief Identificador único do card */
     std::string m_title;                           /**< @brief Título da tarefa */
