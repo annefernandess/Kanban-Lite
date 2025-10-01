@@ -19,3 +19,6 @@ include(CTest)
 enable_testing()
 
 add_test(NAME headers_check COMMAND headers_check)
+add_test(NAME cli_tests 
+         COMMAND ${CMAKE_SOURCE_DIR}/tests/cli_tests.sh
+         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/src)

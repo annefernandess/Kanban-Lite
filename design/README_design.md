@@ -1,81 +1,50 @@
-# Etapa 1 – Relato Técnico de Design
+# Relatório Técnico – Etapa 2
 
 **Projeto:** Kanban-Lite (Trabalho Final POO – C++)  
-**Autora:** Anne Fernandes da Costa Oliveira  
+**Aluna:** Anne Fernandes da Costa Oliveira  
 **Matrícula:** 20240010789  
-**Data:** 25/09/2025  
+**Data:** 02/10/2025  
 
 ---
 
-## 1. Objetivo desta etapa
-Estabelecer a base arquitetural do sistema **Kanban-Lite**, demonstrando domínio dos conceitos fundamentais de Programação Orientada a Objetos antes da implementação completa.
+## 1. Objetivo da Etapa
+A Etapa 2 teve como objetivo implementar um **protótipo funcional em linha de comando (CLI)** para validar o design definido na Etapa 1.  
+O sistema agora permite a criação e manipulação de quadros, colunas e cartões diretamente no terminal, demonstrando os conceitos de Programação Orientada a Objetos aplicados em C++.  
 
 ---
 
-## 2. Escopo contemplado
-- Estrutura de diretórios (`design/`, `include/`, `src/`, `tests/`)  
-- Cabeçalhos principais de domínio  
-- Diagrama UML preliminar  
-- Configuração mínima de build com CMake  
-- Pipeline CI inicial  
+## 2. Escopo Implementado
+- **Boards**: criação, listagem e remoção  
+- **Columns**: adição, listagem e remoção, com limite WIP  
+- **Cards**: criação, movimentação, listagem e remoção  
+- **ActivityLog**: registro de operações realizadas  
+- **CLI**: suporte a execução por comandos (`kanban board create "Meu Board"`) e modo interativo  
 
 ---
 
-## 3. Visão Geral do Domínio
-O sistema gerencia **quadros (Boards)** compostos por **colunas (Columns)** que organizam **cartões (Cards)** representando tarefas.  
-**Usuários (Users)** interagem criando e movendo cartões.  
-Um **registro de atividades (ActivityLog)** armazena eventos para auditoria.
+## 3. Conceitos de POO Aplicados
+- **Encapsulamento:** atributos privados e métodos de acesso controlados  
+- **Composição:** Board contém Columns; Columns contêm Cards  
+- **Associação:** Cards referenciam Users sem ownership  
+- **RAII e Smart Pointers:** uso de `std::unique_ptr` para gestão automática de memória  
+- **STL e Templates:** containers (`std::vector`) e algoritmos (`std::find_if`) aplicados  
+- **Sobrecarga de operadores:** `Card::operator==` para comparação  
+- **Exceções:** uso de `std::runtime_error` em operações inválidas  
 
 ---
 
-## 4. Decisões de Design
-- Separação headers/implementação para modularidade.  
-- Uso de IDs simples (`std::string` / `int`), podendo evoluir para UUID.  
-- ActivityLog centralizado para rastreabilidade.  
-- Sem herança prematura: polimorfismo será adicionado conforme necessidade.  
-- Board contém Column, Column contém Card → composição natural do domínio.  
+## 4. Testes e Qualidade
+- **CTest + cli_tests.sh**: conjunto de testes automatizados cobrindo criação de boards, manipulação de colunas e cartões  
+- **CI no GitHub Actions:** compilação e execução dos testes em cada push  
+- **Resultados:** todos os testes executados com sucesso, validando as operações essenciais do domínio  
 
 ---
 
-## 5. Aplicação dos Conceitos POO
-- **Abstração e Encapsulamento:** atributos privados e acesso via getters/setters.  
-- **Classes e Objetos:** definidas `Board`, `Column`, `Card`, `User` e `ActivityLog`.  
-- **Herança e Polimorfismo:** não aplicados nesta fase; planejada interface `Persistable` no futuro.  
-- **Composição:** usada em `Board–Column` e `Column–Card` para refletir posse forte.  
-- **Polimorfismo dinâmico:** previsto via ponteiros inteligentes (`std::shared_ptr`) em etapas futuras.  
-- **Gerenciamento de recursos:** RAII com containers STL (`std::vector`, `std::string`).  
-- **STL/Templates:** uso de `std::vector`, `std::map`, `std::optional`.  
-- **Sobrecarga de operadores:** planejado `Card::operator==` para comparação.  
-- **Exceções:** uso de `std::runtime_error` para operações inválidas.  
-- **Documentação:** UML em `design/class_diagram.puml` + este relatório técnico.  
+## 5. Conclusão
+A Etapa 2 entregou um **CLI funcional** que comprova a viabilidade do design do Kanban-Lite.  
+As principais operações foram implementadas e validadas com testes automatizados, garantindo robustez e qualidade.  
 
----
-
-## 6. Itens Fora de Escopo
-- Persistência em disco  
-- Regras de WIP completas  
-- Filtros avançados e interface CLI  
-- Testes unitários elaborados  
-
----
-
-## 7. Próximos Passos
-- Implementar regras de negócio (criação e movimentação de cards, limites de coluna).  
-- Adicionar testes automatizados.  
-- Definir formato de persistência (JSON ou SQLite).  
-
----
-
-## 8. Riscos Identificados
-- **Complexidade de WIP limits:** Implementação de regras de limite pode ser complexa.  
-- **Gerenciamento de memória:** Referências entre Card-User precisam ser cuidadosamente gerenciadas.  
-- **Escalabilidade:** Estruturas simples podem não escalar para muitos cards.  
-- **Persistência:** Definir formato adequado para serialização/deserialização.  
-
----
-
-## 9. Conclusão
-A base do projeto foi definida com foco em **clareza e extensibilidade**.  
-O diagrama UML e os cabeçalhos estabelecem um contrato inicial que guiará a implementação incremental nas próximas etapas.
-
----
+**Próximos passos (Etapa 3):**  
+- Implementar interface gráfica (Qt)  
+- Adicionar persistência em arquivo/banco de dados  
+- Expandir funcionalidades avançadas (tags, prazos, autenticação)
