@@ -1,4 +1,7 @@
 #include "User.h"
+#include <stdexcept>
+
+using json = nlohmann::json;
 
 /**
  * @file User.cpp
@@ -50,4 +53,47 @@ const std::string& User::getId() const {
  */
 bool User::operator==(const User& other) const {
     return m_id == other.m_id;
+}
+
+/**
+ * @brief Serializa o usuário para JSON.
+ * @return Objeto JSON contendo dados do usuário
+ */
+json User::toJson() const {
+    return json{
+        {"id", m_id},
+        {"name", m_name},
+        {"email", m_email}
+    };
+}
+
+/**
+ * @brief Desserializa usuário a partir de JSON.
+ * @param j Objeto JSON com dados do usuário
+ * @return User reconstruído
+ * @throws json::exception se campos obrigatórios ausentes
+ * @throws std::invalid_argument se dados inválidos
+ */
+User User::fromJson(const json& j) {
+    // Validação de campos obrigatórios
+    if (!j.contains("id") || !j.contains("name") || !j.contains("email")) {
+        throw std::invalid_argument("User JSON must contain id, name, and email fields");
+    }
+
+    // Validação de tipos
+    if (!j["id"].is_string() || !j["name"].is_string() || !j["email"].is_string()) {
+        throw std::invalid_argument("User fields must be strings");
+    }
+
+    // Extração com validação adicional
+    std::string id = j["id"].get<std::string>();
+    std::string name = j["name"].get<std::string>();
+    std::string email = j["email"].get<std::string>();
+
+    if (id.empty() || name.empty() || email.empty()) {
+        throw std::invalid_argument("User fields cannot be empty");
+    }
+
+    // RAII: construção do objeto com move semantics
+    return User(std::move(id), std::move(name), std::move(email));
 }

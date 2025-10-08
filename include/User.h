@@ -2,6 +2,7 @@
 #define KANBAN_LITE_USER_H
 
 #include <string>
+#include "external/json.hpp"
 
 /**
  * @file User.h
@@ -82,6 +83,29 @@ public:
      * @note Comparação baseada apenas no ID (chave primária)
      */
     bool operator==(const User& other) const;
+
+    /**
+     * @brief Serializa o usuário para formato JSON.
+     * 
+     * Converte os dados do usuário em um objeto JSON para persistência.
+     * 
+     * @return Objeto JSON contendo id, name e email
+     * @note Método const - não modifica o objeto
+     */
+    nlohmann::json toJson() const;
+
+    /**
+     * @brief Desserializa usuário a partir de JSON (polimorfismo estático).
+     * 
+     * Reconstrói um objeto User a partir de dados JSON.
+     * Usa RAII e validação de campos obrigatórios.
+     * 
+     * @param j Objeto JSON contendo dados do usuário
+     * @return User reconstruído com dados do JSON
+     * @throws json::exception se campos obrigatórios estão ausentes
+     * @throws std::invalid_argument se dados são inválidos
+     */
+    static User fromJson(const nlohmann::json& j);
 
 private:
     std::string m_id;                              /**< @brief Identificador único do usuário */

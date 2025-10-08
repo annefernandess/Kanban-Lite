@@ -1,6 +1,9 @@
 #include "Column.h"
 #include "Card.h"
 #include <algorithm>
+#include <stdexcept>
+
+using json = nlohmann::json;
 
 /**
  * @file Column.cpp
@@ -94,6 +97,14 @@ const std::vector<Card>& Column::getCards() const {
 }
 
 /**
+ * @brief Retorna todos os cartões da coluna (mutable).
+ * @return Referência ao vetor de cartões
+ */
+std::vector<Card>& Column::getCards() {
+    return m_cards;
+}
+
+/**
  * @brief Retorna o nome da coluna.
  * @return Referência constante ao nome da coluna
  */
@@ -115,4 +126,64 @@ size_t Column::getCardCount() const {
 
 bool Column::operator==(const Column& other) const {
     return m_name == other.m_name;
+}
+
+/**
+ * @brief Serializa a coluna para JSON.
+ * @return Objeto JSON com dados da coluna e seus cards
+ */
+json Column::toJson() const {
+    json cardsArray = json::array();
+    for (const auto& card : m_cards) {
+        cardsArray.push_back(card.toJson());
+    }
+
+    return json{
+        {"name", m_name},
+        {"wipLimit", m_wipLimit},
+        {"cards", cardsArray}
+    };
+}
+
+/**
+ * @brief Desserializa coluna a partir de JSON.
+ * @param j Objeto JSON com dados da coluna
+ * @return Column reconstruída
+ * @throws json::exception se campos obrigatórios ausentes
+ * @throws std::invalid_argument se dados inválidos
+ */
+Column Column::fromJson(const json& j) {
+    // Validação de campos obrigatórios
+    if (!j.contains("name")) {
+        throw std::invalid_argument("Column JSON must contain name field");
+    }
+
+    std::string name = j["name"].get<std::string>();
+    if (name.empty()) {
+        throw std::invalid_argument("Column name cannot be empty");
+    }
+
+    // WIP limit (opcional, padrão -1)
+    int wipLimit = -1;
+    if (j.contains("wipLimit") && j["wipLimit"].is_number_integer()) {
+        wipLimit = j["wipLimit"].get<int>();
+    }
+
+    // RAII: construção da coluna
+    Column column(std::move(name), wipLimit);
+
+    // Desserialização de cards
+    if (j.contains("cards") && j["cards"].is_array()) {
+        for (const auto& cardJson : j["cards"]) {
+            try {
+                Card card = Card::fromJson(cardJson);
+                column.addCard(std::move(card));
+            } catch (const std::exception& e) {
+                // Log erro mas continua carregando outros cards
+                // (robustez: não falha toda a coluna por um card inválido)
+            }
+        }
+    }
+
+    return column;
 }
