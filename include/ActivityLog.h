@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <chrono>
+#include "external/json.hpp"
 
 /**
  * @file ActivityLog.h
@@ -76,6 +77,26 @@ public:
      * @note Para listas grandes, considerar iteradores ou paginação em versões futuras
      */
     std::vector<ActivityEntry> all() const;
+
+    /**
+     * @brief Serializa o log de atividades para JSON.
+     * 
+     * Converte todas as entradas do log para formato JSON.
+     * 
+     * @return Objeto JSON com array de entradas
+     */
+    nlohmann::json toJson() const;
+
+    /**
+     * @brief Desserializa log de atividades a partir de JSON.
+     * 
+     * Reconstrói log com todas as entradas.
+     * 
+     * @param j Objeto JSON com dados do log
+     * @return ActivityLog reconstruído
+     * @throws json::exception se estrutura inválida
+     */
+    static ActivityLog fromJson(const nlohmann::json& j);
 
 private:
     std::vector<ActivityEntry> m_entries;         /**< @brief Container com histórico completo de eventos */

@@ -18,6 +18,12 @@ class Board {
   + findColumn(name: std::string) : Column*
   + addCard(columnName: std::string, card: Card) : bool
   + moveCard(cardId: std::string, fromCol: std::string, toCol: std::string) : bool
+  + findCardsByTag(tag: std::string) : std::vector<Card*>
+  + filterByPriority(minPriority: int) : std::vector<Card*>
+  + filterByAssignee(user: User*) : std::vector<Card*>
+  + getAllTags() : std::vector<std::string>
+  + toJson() : nlohmann::json
+  + {static} fromJson(j: nlohmann::json) : Board
 }
 
 class Column {
@@ -29,6 +35,9 @@ class Column {
   + removeCard(cardId: std::string) : bool
   + findCard(cardId: std::string) : Card*
   + isFull() : bool
+  + getCardCount() : size_t
+  + toJson() : nlohmann::json
+  + {static} fromJson(j: nlohmann::json) : Column
 }
 
 class Card {
@@ -37,6 +46,7 @@ class Card {
   - description : std::string
   - assignee : User*
   - priority : int
+  - tags : std::vector<std::string>
   - createdAt : std::chrono::system_clock::time_point
   - updatedAt : std::chrono::system_clock::time_point
   --
@@ -44,6 +54,12 @@ class Card {
   + setDescription(d: std::string) : void
   + setAssignee(u: User*) : void
   + setPriority(p: int) : void
+  + addTag(tag: std::string) : void
+  + removeTag(tag: std::string) : void
+  + hasTag(tag: std::string) : bool
+  + getTags() : std::vector<std::string>
+  + toJson() : nlohmann::json
+  + {static} fromJson(j: nlohmann::json) : Card
   + operator==(other: Card) : bool
 }
 
@@ -52,14 +68,21 @@ class User {
   - name : std::string
   - email : std::string
   --
-  + getName() const : std::string
+  + getId() : std::string
+  + getName() : std::string
+  + getEmail() : std::string
+  + toJson() : nlohmann::json
+  + {static} fromJson(j: nlohmann::json) : User
 }
 
 class ActivityLog {
   - entries : std::vector<ActivityEntry>
   --
   + record(event: std::string) : void
-  + all() const : std::vector<ActivityEntry>
+  + all() : std::vector<ActivityEntry>
+  + clear() : void
+  + toJson() : nlohmann::json
+  + {static} fromJson(j: nlohmann::json) : ActivityLog
 }
 
 class ActivityEntry {
@@ -82,10 +105,20 @@ note bottom of Board
   Justificativa: relação de posse forte.
 end note
 
-note right of ActivityEntry
-  Interface Persistable planejada
-  para versões futuras (não implementada
-  na Etapa 1 - apenas design).
+note right of Card
+  Sistema de Tags implementado na Etapa 3:
+  - Adicionar/remover tags
+  - Filtrar cards por tags
+  - Persistência JSON completa
+  - Integração com CLI e GUI
+end note
+
+note left of Board
+  Métodos de filtro e busca:
+  - findCardsByTag: busca por etiqueta
+  - filterByPriority: filtra por prioridade mínima
+  - filterByAssignee: filtra por responsável
+  - getAllTags: lista todas as tags do board
 end note
 
 @enduml

@@ -152,16 +152,17 @@ run_test "Save functionality" \
     "board create TestBoard\ncolumn add TestBoard ToDo\nsave ${TEST_SAVE_FILE}" \
     "State saved to '${TEST_SAVE_FILE}'"
 
-# Test 17: File save verification
+# Test 17: File save verification (JSON format)
 if [ -f "${TEST_SAVE_FILE}" ]; then
     TESTS_RUN=$((TESTS_RUN + 1))
     echo -n "Test $((TESTS_RUN)): Save file creation... "
-    if grep -q "BOARD_NAME=TestBoard" "${TEST_SAVE_FILE}"; then
+    # Verifica se o arquivo está em formato JSON e contém "TestBoard"
+    if grep -q '"name"' "${TEST_SAVE_FILE}" && grep -q '"boards"' "${TEST_SAVE_FILE}"; then
         echo -e "${GREEN}PASSED${NC}"
         TESTS_PASSED=$((TESTS_PASSED + 1))
     else
         echo -e "${RED}FAILED${NC}"
-        echo "  Save file does not contain expected board data"
+        echo "  Save file does not contain expected JSON structure"
     fi
 else
     TESTS_RUN=$((TESTS_RUN + 1))

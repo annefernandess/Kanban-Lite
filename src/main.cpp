@@ -3,6 +3,7 @@
 #include "Card.h"
 #include "User.h"
 #include "ActivityLog.h"
+#include "external/json.hpp"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -12,6 +13,8 @@
 #include <ctime>
 #include <fstream>
 #include <algorithm>
+
+using json = nlohmann::json;
 
 /**
  * @file main.cpp
@@ -47,9 +50,14 @@ public:
         std::cout << "  card list <board> [column]             - List cards in board/column\n";
         std::cout << "  card move <card_id> <from_col> <to_col> <board> - Move card between columns\n";
         std::cout << "  card remove <board> <column> <card_id> - Remove card\n";
+        std::cout << "  card tag <board> <card_id> <tag>       - Add tag to card\n";
+        std::cout << "  card untag <board> <card_id> <tag>     - Remove tag from card\n";
+        std::cout << "  filter tag <board> <tag>               - Show cards with specific tag\n";
+        std::cout << "  filter priority <board> <min_priority> - Show cards with priority >= value\n";
+        std::cout << "  tags <board>                           - List all tags in board\n";
         std::cout << "  history                                - Show activity history\n";
-        std::cout << "  save <filename>                        - Save state to file\n";
-        std::cout << "  load <filename>                        - Load state from file\n";
+        std::cout << "  save <filename>                        - Save state to file (suggestion: data/my_board.json)\n";
+        std::cout << "  load <filename>                        - Load state from file (suggestion: data/my_board.json)\n";
         std::cout << "  help                                   - Show this help\n";
         std::cout << "  exit                                   - Exit interactive mode\n\n";
         std::cout << "Interactive mode: Run without arguments\n";
@@ -76,13 +84,23 @@ public:
             return true;
         }
         
-        if (command == "save" && args.size() == 2) {
-            saveState(args[1]);
+        if (command == "save") {
+            if (args.size() == 2) {
+                saveState(args[1]);
+            } else {
+                std::cerr << "Usage: save <filename>\n";
+                std::cerr << "Example: save data/my_board.json\n";
+            }
             return true;
         }
         
-        if (command == "load" && args.size() == 2) {
-            loadState(args[1]);
+        if (command == "load") {
+            if (args.size() == 2) {
+                loadState(args[1]);
+            } else {
+                std::cerr << "Usage: load <filename>\n";
+                std::cerr << "Example: load data/my_board.json\n";
+            }
             return true;
         }
         
@@ -96,6 +114,30 @@ public:
         
         if (command == "card") {
             return processCardCommand(args);
+        }
+        
+        if (command == "filter") {
+            return processFilterCommand(args);
+        }
+        
+        if (command == "tags" && args.size() == 2) {
+            const std::string& boardName = args[1];
+            Board* board = findBoard(boardName);
+            if (!board) {
+                std::cerr << "Error: Board '" << boardName << "' not found.\n";
+                return true;
+            }
+            
+            std::vector<std::string> allTags = board->getAllTags();
+            if (allTags.empty()) {
+                std::cout << "No tags found in board '" << boardName << "'.\n";
+            } else {
+                std::cout << "Tags in board '" << boardName << "':\n";
+                for (const auto& tag : allTags) {
+                    std::cout << "  - " << tag << "\n";
+                }
+            }
+            return true;
         }
         
         std::cerr << "Error: Unknown command '" << command << "'. Use 'help' for usage.\n";
@@ -156,7 +198,14 @@ private:
         if (subcommand == "add" && args.size() >= 4) {
             const std::string& boardName = args[2];
             const std::string& columnName = args[3];
-            int wipLimit = (args.size() == 5) ? std::stoi(args[4]) : -1;
+            int wipLimit = -1;
+            if (args.size() >= 5) {
+                try {
+                    wipLimit = std::stoi(args[4]);
+                } catch (const std::exception& e) {
+                    std::cerr << "Error: Invalid WIP limit value. Using no limit (-1).\n";
+                }
+            }
             
             Board* board = findBoard(boardName);
             if (!board) {
@@ -294,7 +343,109 @@ private:
             return true;
         }
         
+        if (subcommand == "tag" && args.size() == 5) {
+            const std::string& boardName = args[2];
+            const std::string& cardId = args[3];
+            const std::string& tag = args[4];
+            
+            Board* board = findBoard(boardName);
+            if (!board) {
+                std::cerr << "Error: Board '" << boardName << "' not found.\n";
+                return true;
+            }
+            
+            Card* card = findCardInBoard(board, cardId);
+            if (!card) {
+                std::cerr << "Error: Card '" << cardId << "' not found in board.\n";
+                return true;
+            }
+            
+            card->addTag(tag);
+            std::cout << "Tag '" << tag << "' added to card '" << cardId << "'.\n";
+            return true;
+        }
+        
+        if (subcommand == "untag" && args.size() == 5) {
+            const std::string& boardName = args[2];
+            const std::string& cardId = args[3];
+            const std::string& tag = args[4];
+            
+            Board* board = findBoard(boardName);
+            if (!board) {
+                std::cerr << "Error: Board '" << boardName << "' not found.\n";
+                return true;
+            }
+            
+            Card* card = findCardInBoard(board, cardId);
+            if (!card) {
+                std::cerr << "Error: Card '" << cardId << "' not found in board.\n";
+                return true;
+            }
+            
+            card->removeTag(tag);
+            std::cout << "Tag '" << tag << "' removed from card '" << cardId << "'.\n";
+            return true;
+        }
+        
         std::cerr << "Error: Invalid card command. Use 'help' for usage.\n";
+        return true;
+    }
+    
+    bool processFilterCommand(const std::vector<std::string>& args) {
+        if (args.size() < 3) {
+            std::cerr << "Error: Filter command requires more arguments\n";
+            return true;
+        }
+        
+        const std::string& filterType = args[1];
+        
+        if (filterType == "tag" && args.size() == 4) {
+            const std::string& boardName = args[2];
+            const std::string& tag = args[3];
+            
+            Board* board = findBoard(boardName);
+            if (!board) {
+                std::cerr << "Error: Board '" << boardName << "' not found.\n";
+                return true;
+            }
+            
+            std::vector<Card*> cards = board->findCardsByTag(tag);
+            if (cards.empty()) {
+                std::cout << "No cards found with tag '" << tag << "'.\n";
+            } else {
+                std::cout << "Cards with tag '" << tag << "':\n";
+                for (const auto* card : cards) {
+                    std::cout << "  - [" << card->getId() << "] " << card->getTitle() 
+                             << " (Priority: " << card->getPriority() << ")\n";
+                }
+            }
+            return true;
+        }
+        
+        if (filterType == "priority" && args.size() == 4) {
+            const std::string& boardName = args[2];
+            int minPriority = std::stoi(args[3]);
+            
+            Board* board = findBoard(boardName);
+            if (!board) {
+                std::cerr << "Error: Board '" << boardName << "' not found.\n";
+                return true;
+            }
+            
+            std::vector<Card*> cards = board->filterByPriority(minPriority);
+            if (cards.empty()) {
+                std::cout << "No cards found with priority >= " << minPriority << ".\n";
+            } else {
+                std::cout << "Cards with priority >= " << minPriority << ":\n";
+                for (const auto* card : cards) {
+                    std::cout << "  - [" << card->getId() << "] " << card->getTitle() 
+                             << " (Priority: " << card->getPriority() << ")\n";
+                }
+            }
+            return true;
+        }
+        
+        std::cerr << "Error: Invalid filter command. Use 'help' for usage.\n";
         return true;
     }
     
@@ -304,6 +455,19 @@ private:
                 return board->getName() == name;
             });
         return (it != boards.end()) ? it->get() : nullptr;
+    }
+    
+    Card* findCardInBoard(Board* board, const std::string& cardId) {
+        if (!board) return nullptr;
+        
+        for (const auto& column : board->getColumns()) {
+            for (auto& card : column.getCards()) {
+                if (card.getId() == cardId) {
+                    return const_cast<Card*>(&card);
+                }
+            }
+        }
+        return nullptr;
     }
     
     void listBoards() {
@@ -404,73 +568,138 @@ private:
     }
     
     void saveState(const std::string& filename) {
-        // Implementação básica de save - formato simples
-        std::ofstream file(filename);
-        if (!file.is_open()) {
-            std::cerr << "Error: Could not open file '" << filename << "' for writing.\n";
-            return;
-        }
-        
-        // Salva boards em formato simples
-        file << "# Kanban-Lite State File\n";
-        file << "BOARDS=" << boards.size() << "\n";
-        
-        for (const auto& board : boards) {
-            file << "BOARD_NAME=" << board->getName() << "\n";
-            file << "BOARD_ID=" << board->getId() << "\n";
-            file << "COLUMNS=" << board->getColumns().size() << "\n";
+        try {
+            json state;
             
-            for (const auto& column : board->getColumns()) {
-                file << "COLUMN_NAME=" << column.getName() << "\n";
-                file << "COLUMN_WIP=" << column.getWipLimit() << "\n";
-                file << "CARDS=" << column.getCardCount() << "\n";
-                
-                for (const auto& card : column.getCards()) {
-                    file << "CARD_ID=" << card.getId() << "\n";
-                    file << "CARD_TITLE=" << card.getTitle() << "\n";
-                    file << "CARD_DESC=" << card.getDescription() << "\n";
-                    file << "CARD_PRIORITY=" << card.getPriority() << "\n";
-                }
+            // Serializa todos os boards
+            json boardsArray = json::array();
+            for (const auto& board : boards) {
+                boardsArray.push_back(board->toJson());
             }
-        }
-        
-        file.close();
-        std::cout << "State saved to '" << filename << "'.\n";
-        
-        if (activityLog) {
-            activityLog->record("State saved to file '" + filename + "'");
+            state["boards"] = boardsArray;
+            
+            // Serializa todos os usuários
+            json usersArray = json::array();
+            for (const auto& user : users) {
+                usersArray.push_back(user->toJson());
+            }
+            state["users"] = usersArray;
+            
+            // Serializa o activity log
+            if (activityLog) {
+                state["activityLog"] = activityLog->toJson();
+            }
+            
+            // Salva metadata
+            state["metadata"] = {
+                {"version", "1.0"},
+                {"cardIdCounter", cardIdCounter}
+            };
+            
+            // Escreve arquivo JSON com indentação
+            std::ofstream file(filename);
+            if (!file.is_open()) {
+                throw std::runtime_error("Could not open file for writing: " + filename);
+            }
+            
+            file << state.dump(2); // Pretty print com indentação de 2 espaços
+            file.close();
+            
+            std::cout << "✓ State saved to '" << filename << "' (JSON format).\n";
+            std::cout << "  File size: " << state.dump(2).size() << " bytes\n";
+            
+            if (activityLog) {
+                activityLog->record("State saved to file '" + filename + "'");
+            }
+            
+        } catch (const std::exception& e) {
+            std::cerr << "Error saving state: " << e.what() << "\n";
         }
     }
     
     void loadState(const std::string& filename) {
-        std::ifstream file(filename);
-        if (!file.is_open()) {
-            std::cerr << "Error: Could not open file '" << filename << "' for reading.\n";
-            return;
-        }
-        
-        // Limpa estado atual
-        boards.clear();
-        
-        std::string line;
-        while (std::getline(file, line)) {
-            if (line.empty() || line[0] == '#') continue;
-            
-            // Implementação básica de parsing
-            if (line.find("BOARD_NAME=") == 0) {
-                std::string boardName = line.substr(11);
-                auto board = std::make_unique<Board>(boardName, boardName);
-                board->attachActivityLog(activityLog.get());
-                boards.push_back(std::move(board));
+        try {
+            std::ifstream file(filename);
+            if (!file.is_open()) {
+                throw std::runtime_error("Could not open file for reading: " + filename);
             }
-            // Adicionar mais parsing conforme necessário
-        }
-        
-        file.close();
-        std::cout << "State loaded from '" << filename << "'.\n";
-        
-        if (activityLog) {
-            activityLog->record("State loaded from file '" + filename + "'");
+            
+            // Parse JSON
+            json state;
+            file >> state;
+            file.close();
+            
+            // Limpa estado atual
+            boards.clear();
+            users.clear();
+            
+            // Carrega metadata
+            if (state.contains("metadata") && state["metadata"].contains("cardIdCounter")) {
+                cardIdCounter = state["metadata"]["cardIdCounter"].get<int>();
+            }
+            
+            // Carrega usuários primeiro (necessários para resolver assignees)
+            if (state.contains("users") && state["users"].is_array()) {
+                for (const auto& userJson : state["users"]) {
+                    try {
+                        users.push_back(std::make_unique<User>(User::fromJson(userJson)));
+                    } catch (const std::exception& e) {
+                        std::cerr << "Warning: Failed to load user: " << e.what() << "\n";
+                    }
+                }
+            }
+            
+            // Carrega boards com toda a hierarquia
+            if (state.contains("boards") && state["boards"].is_array()) {
+                for (const auto& boardJson : state["boards"]) {
+                    try {
+                        auto board = std::make_unique<Board>(Board::fromJson(boardJson));
+                        board->attachActivityLog(activityLog.get());
+                        boards.push_back(std::move(board));
+                    } catch (const std::exception& e) {
+                        std::cerr << "Warning: Failed to load board: " << e.what() << "\n";
+                    }
+                }
+            }
+            
+            // Carrega activity log
+            if (state.contains("activityLog")) {
+                try {
+                    activityLog = std::make_unique<ActivityLog>(
+                        ActivityLog::fromJson(state["activityLog"])
+                    );
+                } catch (const std::exception& e) {
+                    std::cerr << "Warning: Failed to load activity log: " << e.what() << "\n";
+                    activityLog = std::make_unique<ActivityLog>();
+                }
+            }
+            
+            // Re-attach activity log aos boards carregados
+            for (auto& board : boards) {
+                board->attachActivityLog(activityLog.get());
+            }
+            
+            std::cout << "✓ State loaded from '" << filename << "' (JSON format).\n";
+            std::cout << "  Loaded " << boards.size() << " board(s), " 
+                     << users.size() << " user(s)\n";
+            
+            // Contagem total de cards
+            int totalCards = 0;
+            for (const auto& board : boards) {
+                for (const auto& column : board->getColumns()) {
+                    totalCards += column.getCardCount();
+                }
+            }
+            std::cout << "  Total cards: " << totalCards << "\n";
+            
+            if (activityLog) {
+                activityLog->record("State loaded from file '" + filename + "'");
+            }
+            
+        } catch (const json::exception& e) {
+            std::cerr << "Error parsing JSON: " << e.what() << "\n";
+        } catch (const std::exception& e) {
+            std::cerr << "Error loading state: " << e.what() << "\n";
         }
     }
     

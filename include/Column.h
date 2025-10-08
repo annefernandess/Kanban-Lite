@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include "external/json.hpp"
 
 class Card; // forward declaration
 
@@ -100,16 +101,21 @@ public:
      */
     bool isFull() const;
 
-    /**
-     * @brief Obtém referência const para vetor de cards.
-     * 
-     * Fornece acesso somente leitura à coleção interna de cards
-     * para iteração e consulta sem permitir modificação.
+        /**
+     * @brief Obtém lista de todos os cards da coluna (read-only).
      * 
      * @return Referência const para std::vector<Card> interno
      * @note Permite iteração segura sem modificação dos dados
      */
     const std::vector<Card>& getCards() const;
+
+    /**
+     * @brief Obtém lista de todos os cards da coluna (mutable).
+     * 
+     * @return Referência para std::vector<Card> interno
+     * @note Permite modificação dos cards
+     */
+    std::vector<Card>& getCards();
 
     /**
      * @brief Obtém nome da coluna.
@@ -141,6 +147,27 @@ public:
      * @return true se nomes forem iguais, false caso contrário
      */
     bool operator==(const Column& other) const;
+
+    /**
+     * @brief Serializa a coluna para JSON.
+     * 
+     * Converte coluna e todos seus cards para formato JSON.
+     * 
+     * @return Objeto JSON com nome, WIP limit e array de cards
+     */
+    nlohmann::json toJson() const;
+
+    /**
+     * @brief Desserializa coluna a partir de JSON.
+     * 
+     * Reconstrói coluna com todos os cards contidos.
+     * 
+     * @param j Objeto JSON com dados da coluna
+     * @return Column reconstruída com cards
+     * @throws json::exception se campos obrigatórios ausentes
+     * @throws std::invalid_argument se dados inválidos
+     */
+    static Column fromJson(const nlohmann::json& j);
 
 private:
     std::string m_name;                            /**< @brief Nome identificador da coluna */

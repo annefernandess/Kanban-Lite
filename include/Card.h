@@ -2,8 +2,10 @@
 #define KANBAN_LITE_CARD_H
 
 #include <string>
+#include <vector>
 #include <memory>
 #include <chrono>
+#include "external/json.hpp"
 
 class User; // forward declaration
 
@@ -124,6 +126,57 @@ public:
     const std::chrono::system_clock::time_point& getCreatedAt() const;
     const std::chrono::system_clock::time_point& getUpdatedAt() const;
 
+    /**
+     * @brief Adiciona uma tag/etiqueta ao card.
+     * @param tag Nome da tag a ser adicionada
+     * @post Tag adicionada se não existir, updatedAt atualizado
+     */
+    void addTag(const std::string& tag);
+
+    /**
+     * @brief Remove uma tag/etiqueta do card.
+     * @param tag Nome da tag a ser removida
+     * @post Tag removida se existir, updatedAt atualizado
+     */
+    void removeTag(const std::string& tag);
+
+    /**
+     * @brief Verifica se o card possui determinada tag.
+     * @param tag Nome da tag a verificar
+     * @return true se o card possui a tag, false caso contrário
+     */
+    bool hasTag(const std::string& tag) const;
+
+    /**
+     * @brief Retorna lista de todas as tags do card.
+     * @return Vector com todas as tags
+     */
+    const std::vector<std::string>& getTags() const;
+
+    /**
+     * @brief Serializa o card para JSON.
+     * 
+     * Converte todos os dados do card, incluindo timestamps e assignee ID.
+     * 
+     * @return Objeto JSON com dados completos do card
+     * @note Serializa apenas o ID do assignee, não o objeto completo
+     */
+    nlohmann::json toJson() const;
+
+    /**
+     * @brief Desserializa card a partir de JSON.
+     * 
+     * Reconstrói card com todos os atributos. O assignee deve ser
+     * resolvido separadamente pela aplicação.
+     * 
+     * @param j Objeto JSON com dados do card
+     * @return Card reconstruído
+     * @throws json::exception se campos obrigatórios ausentes
+     * @throws std::invalid_argument se dados inválidos
+     * @note assignee será nullptr - deve ser resolvido após carregamento
+     */
+    static Card fromJson(const nlohmann::json& j);
+
 private:
     std::string m_id;                              /**< @brief Identificador único do card */
     std::string m_title;                           /**< @brief Título da tarefa */
@@ -132,6 +185,7 @@ private:
     int m_priority { 0 };                          /**< @brief Prioridade numérica (0=baixa, valores maiores=alta) */
     std::chrono::system_clock::time_point m_createdAt;   /**< @brief Timestamp de criação */
     std::chrono::system_clock::time_point m_updatedAt;   /**< @brief Timestamp da última modificação */
+    std::vector<std::string> m_tags;               /**< @brief Etiquetas/tags para categorização */
 };
 
 #endif // KANBAN_LITE_CARD_H
