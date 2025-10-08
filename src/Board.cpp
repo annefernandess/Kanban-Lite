@@ -2,7 +2,11 @@
 #include "Column.h"
 #include "Card.h"
 #include "ActivityLog.h"
+#include "external/json.hpp"
 #include <algorithm>
+#include <stdexcept>
+
+using json = nlohmann::json;
 
 /**
  * @file Board.cpp
@@ -178,4 +182,159 @@ const std::string& Board::getName() const {
  */
 const std::vector<Column>& Board::getColumns() const {
     return m_columns;
+}
+
+/**
+ * @brief Retorna todas as colunas do quadro (versão não-const).
+ * @return Referência ao vetor de colunas
+ */
+std::vector<Column>& Board::getColumns() {
+    return m_columns;
+}
+
+/**
+ * @brief Busca todos os cards que possuem uma etiqueta específica.
+ * @param tag Etiqueta a ser buscada
+ * @return Vector de ponteiros para cards que possuem a etiqueta
+ */
+std::vector<Card*> Board::findCardsByTag(const std::string& tag) {
+    std::vector<Card*> result;
+    
+    for (auto& column : m_columns) {
+        for (auto& card : column.getCards()) {
+            if (card.hasTag(tag)) {
+                result.push_back(&card);
+            }
+        }
+    }
+    
+    return result;
+}
+
+/**
+ * @brief Filtra cards por prioridade mínima.
+ * @param minPriority Prioridade mínima (inclusive)
+ * @return Vector de ponteiros para cards com prioridade >= minPriority
+ */
+std::vector<Card*> Board::filterByPriority(int minPriority) {
+    std::vector<Card*> result;
+    
+    for (auto& column : m_columns) {
+        for (auto& card : column.getCards()) {
+            if (card.getPriority() >= minPriority) {
+                result.push_back(&card);
+            }
+        }
+    }
+    
+    return result;
+}
+
+/**
+ * @brief Filtra cards por usuário responsável.
+ * @param user Ponteiro para o usuário
+ * @return Vector de ponteiros para cards atribuídos ao usuário
+ */
+std::vector<Card*> Board::filterByAssignee(User* user) {
+    std::vector<Card*> result;
+    
+    if (!user) {
+        return result; // Se user é nullptr, retorna vazio
+    }
+    
+    for (auto& column : m_columns) {
+        for (auto& card : column.getCards()) {
+            if (card.getAssignee() == user) {
+                result.push_back(&card);
+            }
+        }
+    }
+    
+    return result;
+}
+
+/**
+ * @brief Coleta todas as etiquetas únicas de todos os cards do board.
+ * @return Vector de strings com todas as etiquetas em uso
+ */
+std::vector<std::string> Board::getAllTags() const {
+    std::vector<std::string> allTags;
+    
+    // Coleta todas as tags de todos os cards
+    for (const auto& column : m_columns) {
+        for (const auto& card : column.getCards()) {
+            const auto& cardTags = card.getTags();
+            allTags.insert(allTags.end(), cardTags.begin(), cardTags.end());
+        }
+    }
+    
+    // Remove duplicatas
+    std::sort(allTags.begin(), allTags.end());
+    auto last = std::unique(allTags.begin(), allTags.end());
+    allTags.erase(last, allTags.end());
+    
+    return allTags;
+}
+
+/**
+ * @brief Serializa o board para JSON.
+ * @return Objeto JSON contendo id, name e array de colunas
+ */
+json Board::toJson() const {
+    json columnsArray = json::array();
+    
+    for (const auto& column : m_columns) {
+        columnsArray.push_back(column.toJson());
+    }
+    
+    return json{
+        {"id", m_id},
+        {"name", m_name},
+        {"columns", columnsArray}
+    };
+}
+
+/**
+ * @brief Desserializa board a partir de JSON.
+ * @param j Objeto JSON com dados do board
+ * @return Board reconstruído com todas as colunas e cards
+ * @throws std::invalid_argument se campos obrigatórios ausentes ou inválidos
+ * @throws json::exception se estrutura JSON malformada
+ */
+Board Board::fromJson(const json& j) {
+    // Validação dos campos obrigatórios
+    if (!j.contains("id")) {
+        throw std::invalid_argument("Board JSON missing required field: id");
+    }
+    if (!j.contains("name")) {
+        throw std::invalid_argument("Board JSON missing required field: name");
+    }
+    
+    std::string id = j["id"].get<std::string>();
+    std::string name = j["name"].get<std::string>();
+    
+    if (id.empty()) {
+        throw std::invalid_argument("Board id cannot be empty");
+    }
+    if (name.empty()) {
+        throw std::invalid_argument("Board name cannot be empty");
+    }
+    
+    // Construção do board com RAII (move semantics)
+    Board board(std::move(id), std::move(name));
+    
+    // Desserialização das colunas (se presente)
+    if (j.contains("columns") && j["columns"].is_array()) {
+        for (const auto& columnJson : j["columns"]) {
+            try {
+                Column column = Column::fromJson(columnJson);
+                board.m_columns.push_back(std::move(column));
+            } catch (const std::exception& e) {
+                // Robustez: continua carregando outras colunas mesmo se uma falhar
+                // Em produção, poderia logar erro mas não falha completamente
+            }
+        }
+    }
+    
+    return board;
 }

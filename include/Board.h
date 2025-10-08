@@ -4,10 +4,13 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include "external/json.hpp"
 
-class Column;          // forward declaration
-class Card;            // forward declaration
-class ActivityLog;     // forward declaration
+// Forward declarations
+class Column;
+class Card;
+class ActivityLog;
+class User;
 
 /**
  * @file Board.h
@@ -139,6 +142,50 @@ public:
     const std::string& getId() const;
     const std::string& getName() const;
     const std::vector<Column>& getColumns() const;
+    std::vector<Column>& getColumns();  // Versão não-const para permitir modificação
+
+    // Métodos de filtro e busca
+    /**
+     * @brief Busca todos os cards que possuem uma etiqueta específica.
+     * @param tag Etiqueta a ser buscada
+     * @return Vector de ponteiros para cards que possuem a etiqueta
+     */
+    std::vector<Card*> findCardsByTag(const std::string& tag);
+
+    /**
+     * @brief Filtra cards por prioridade mínima.
+     * @param minPriority Prioridade mínima (inclusive)
+     * @return Vector de ponteiros para cards com prioridade >= minPriority
+     */
+    std::vector<Card*> filterByPriority(int minPriority);
+
+    /**
+     * @brief Filtra cards por usuário responsável.
+     * @param user Ponteiro para o usuário
+     * @return Vector de ponteiros para cards atribuídos ao usuário
+     */
+    std::vector<Card*> filterByAssignee(User* user);
+
+    /**
+     * @brief Coleta todas as etiquetas únicas de todos os cards do board.
+     * @return Vector de strings com todas as etiquetas em uso
+     */
+    std::vector<std::string> getAllTags() const;
+
+    /**
+     * @brief Serializa o board para JSON.
+     * @return Objeto JSON com id, name e array de colunas
+     */
+    nlohmann::json toJson() const;
+
+    /**
+     * @brief Desserializa board a partir de JSON.
+     * @param j Objeto JSON com dados do board
+     * @return Board reconstruído
+     * @throws std::invalid_argument se campos obrigatórios ausentes
+     * @throws json::exception se estrutura inválida
+     */
+    static Board fromJson(const nlohmann::json& j);
 
 private:
     std::string m_id;                              /**< @brief Identificador único do board */
